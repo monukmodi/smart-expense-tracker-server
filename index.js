@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import predictRoutes from './routes/predictRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/predict', predictRoutes);
 
 // Global error handlers
 app.use(notFound);
