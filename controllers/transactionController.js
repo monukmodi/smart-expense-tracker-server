@@ -3,7 +3,7 @@ import Transaction from '../models/Transaction.js';
 export const getTransactions = async (req, res, next) => {
   try {
     const userId = req.user?.userId;
-    const { from, to, category, limit = 20, offset = 0 } = req.query;
+    const { from, to, category, limit = 20, offset = 0, page = 1, size = 20 } = req.query;
     const filter = { userId };
 
     if (category) filter.category = category;
@@ -24,6 +24,8 @@ export const getTransactions = async (req, res, next) => {
 
     const nextOffset = Number(offset) + Number(limit);
     const hasMore = nextOffset < total;
+    const hasPrevious = Number(offset) > 0;
+    const prevOffset = hasPrevious ? Math.max(0, Number(offset) - Number(limit)) : null;
 
     return res.status(200).json({
       items,
@@ -31,8 +33,12 @@ export const getTransactions = async (req, res, next) => {
         total,
         limit: Number(limit),
         offset: Number(offset),
+        page: Number(page),
+        size: Number(size),
         hasMore,
+        hasPrevious,
         nextOffset: hasMore ? nextOffset : null,
+        prevOffset,
       },
     });
   } catch (error) {

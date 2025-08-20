@@ -39,7 +39,7 @@ Server will print `Server running on port 5000` when ready.
 
 ### Transactions (Protected — Bearer token required)
 - GET `/api/transactions`
-  - query: `from` (ISO date), `to` (ISO date), `category` (string)
+  - query: `from` (ISO date), `to` (ISO date), `category` (string), pagination via either `page`/`size` or `limit`/`offset`
 - POST `/api/transactions`
   - body: `{ amount:number>0, category:string, description?:string, date?:ISO }`
 - PUT `/api/transactions/:id`
@@ -79,6 +79,18 @@ curl -X GET 'http://localhost:5000/api/transactions' \
   -H "Authorization: Bearer <JWT>"
 ```
 
+List transactions (page/size):
+```
+curl -X GET 'http://localhost:5000/api/transactions?page=2&size=10' \
+  -H "Authorization: Bearer <JWT>"
+```
+
+List transactions (limit/offset):
+```
+curl -X GET 'http://localhost:5000/api/transactions?limit=10&offset=20' \
+  -H "Authorization: Bearer <JWT>"
+```
+
 Create transaction:
 ```
 curl -X POST http://localhost:5000/api/transactions \
@@ -102,6 +114,30 @@ curl -X POST http://localhost:5000/api/predict \
 
 ## Postman Collection
 Import `docs/SmartExpenseTracker.postman_collection.json`. Run "Auth - Login" to populate `{{token}}` for protected requests.
+
+## Pagination
+
+Transactions support both styles:
+- page/size (preferred): `GET /api/transactions?page=1&size=10`
+- limit/offset: `GET /api/transactions?limit=10&offset=0`
+
+Response includes metadata:
+```
+{
+  "items": [ /* transactions */ ],
+  "meta": {
+    "total": 57,
+    "limit": 10,
+    "offset": 20,
+    "page": 3,
+    "size": 10,
+    "hasMore": true,
+    "hasPrevious": true,
+    "nextOffset": 30,
+    "prevOffset": 10
+  }
+}
+```
 
 ## Notes
 - Do not commit secrets in `.env`.

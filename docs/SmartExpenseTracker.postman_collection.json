@@ -91,6 +91,46 @@
       }
     },
     {
+      "name": "Transactions - List (paged)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/transactions?page={{page}}&size={{size}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "transactions"],
+          "query": [
+            { "key": "page", "value": "{{page}}" },
+            { "key": "size", "value": "{{size}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Transactions - List (limit/offset)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/transactions?limit={{limit}}&offset={{offset}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "transactions"],
+          "query": [
+            { "key": "limit", "value": "{{limit}}" },
+            { "key": "offset", "value": "{{offset}}" }
+          ]
+        }
+      }
+    },
+    {
       "name": "Transactions - Create",
       "request": {
         "method": "POST",
@@ -194,6 +234,10 @@
   "variable": [
     { "key": "token", "value": "" },
     { "key": "txId", "value": "" },
-    { "key": "userId", "value": "" }
+    { "key": "userId", "value": "" },
+    { "key": "page", "value": "1" },
+    { "key": "size", "value": "10" },
+    { "key": "limit", "value": "10" },
+    { "key": "offset", "value": "0" }
   ]
 }

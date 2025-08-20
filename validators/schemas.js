@@ -84,15 +84,35 @@ export const schemas = {
       if (!isISODate(query.to)) return { error: 'to must be ISO date string' };
       out.to = query.to;
     }
-    // Pagination
-    let limit = query?.limit != null ? Number(query.limit) : 20;
-    let offset = query?.offset != null ? Number(query.offset) : 0;
-    if (!isFinite(limit) || limit <= 0) limit = 20;
-    if (!isFinite(offset) || offset < 0) offset = 0;
-    limit = Math.min(100, Math.max(1, Math.floor(limit)));
-    offset = Math.max(0, Math.floor(offset));
-    out.limit = limit;
-    out.offset = offset;
+    // Pagination: support both page/size and limit/offset (page/size takes precedence)
+    let size = query?.size != null ? Number(query.size) : undefined;
+    let limit = query?.limit != null ? Number(query.limit) : undefined;
+    let page = query?.page != null ? Number(query.page) : undefined;
+    let offset = query?.offset != null ? Number(query.offset) : undefined;
+
+    let effectiveLimit = size;
+    if (!isFinite(effectiveLimit) || effectiveLimit <= 0) effectiveLimit = undefined;
+    if (effectiveLimit == null) effectiveLimit = limit;
+    if (!isFinite(effectiveLimit) || effectiveLimit <= 0) effectiveLimit = 20;
+    effectiveLimit = Math.min(100, Math.max(1, Math.floor(effectiveLimit)));
+
+    let effectivePage = page;
+    if (!isFinite(effectivePage) || effectivePage < 1) effectivePage = undefined;
+
+    let effectiveOffset;
+    if (effectivePage != null) {
+      effectiveOffset = (Math.floor(effectivePage) - 1) * effectiveLimit;
+    } else {
+      effectiveOffset = offset;
+      if (!isFinite(effectiveOffset) || effectiveOffset < 0) effectiveOffset = 0;
+      effectiveOffset = Math.max(0, Math.floor(effectiveOffset));
+      effectivePage = Math.floor(effectiveOffset / effectiveLimit) + 1;
+    }
+
+    out.limit = effectiveLimit;
+    out.offset = effectiveOffset;
+    out.page = effectivePage;
+    out.size = effectiveLimit;
     return { value: out };
   },
 
