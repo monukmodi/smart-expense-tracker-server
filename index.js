@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -20,6 +21,10 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+
+// Global error handlers
+app.use(notFound);
+app.use(errorHandler);
 
 async function start() {
   try {
