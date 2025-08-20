@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import predictRoutes from './routes/predictRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import { requestLogger } from './middleware/requestLogger.js';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

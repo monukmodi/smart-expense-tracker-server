@@ -3,7 +3,7 @@ import Transaction from '../models/Transaction.js';
 export const getTransactions = async (req, res, next) => {
   try {
     const userId = req.user?.userId;
-    const { from, to, category } = req.query;
+    const { from, to, category, limit = 20, offset = 0 } = req.query;
     const filter = { userId };
 
     if (category) filter.category = category;
@@ -14,8 +14,27 @@ export const getTransactions = async (req, res, next) => {
       if (to) filter.date.$lte = new Date(to);
     }
 
-    const transactions = await Transaction.find(filter).sort({ date: -1, createdAt: -1 });
-    return res.status(200).json({ items: transactions });
+    const [items, total] = await Promise.all([
+      Transaction.find(filter)
+        .sort({ date: -1, createdAt: -1 })
+        .skip(Number(offset))
+        .limit(Number(limit)),
+      Transaction.countDocuments(filter),
+    ]);
+
+    const nextOffset = Number(offset) + Number(limit);
+    const hasMore = nextOffset < total;
+
+    return res.status(200).json({
+      items,
+      meta: {
+        total,
+        limit: Number(limit),
+        offset: Number(offset),
+        hasMore,
+        nextOffset: hasMore ? nextOffset : null,
+      },
+    });
   } catch (error) {
     return next(error);
   }
