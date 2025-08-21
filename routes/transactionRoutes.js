@@ -9,8 +9,8 @@ const router = Router();
 // Protect all routes under /api/transactions
 router.use(requireAuth);
 
-// GET /api/transactions?userId=...&from=...&to=...&category=...
-router.get('/', validate(schemas.txQuery, 'query'), getTransactions);
+// GET /api/transactions?from=...&to=...&category=...&size=...&limit=... (no validation, controller is defensive)
+router.get('/', getTransactions);
 
 // POST /api/transactions
 router.post('/', validate(schemas.txCreate, 'body'), createTransaction);

@@ -3,38 +3,61 @@ import Transaction from '../models/Transaction.js';
 export const getTransactions = async (req, res, next) => {
   try {
     const userId = req.user?.userId;
-    const { from, to, category, limit = 20, offset = 0, page = 1, size = 20 } = req.query;
+    const q = req.query || {};
+
+    // Filters
     const filter = { userId };
+    if (q.category) filter.category = String(q.category);
 
-    if (category) filter.category = category;
-
-    if (from || to) {
+    // Date range (ISO strings expected, but guard against invalid)
+    const from = q.from ? new Date(q.from) : null;
+    const to = q.to ? new Date(q.to) : null;
+    if ((from && !isNaN(from)) || (to && !isNaN(to))) {
       filter.date = {};
-      if (from) filter.date.$gte = new Date(from);
-      if (to) filter.date.$lte = new Date(to);
+      if (from && !isNaN(from)) filter.date.$gte = from;
+      if (to && !isNaN(to)) filter.date.$lte = to;
+    }
+
+    // Pagination: support page/size and limit/offset
+    let size = Number(q.size);
+    let limit = Number(q.limit);
+    let page = Number(q.page);
+    let offset = Number(q.offset);
+
+    let effectiveLimit = Number.isFinite(size) && size > 0 ? Math.floor(size) : undefined;
+    if (effectiveLimit == null) effectiveLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 20;
+    effectiveLimit = Math.min(100, Math.max(1, effectiveLimit));
+
+    let effectivePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : undefined;
+    let effectiveOffset;
+    if (effectivePage != null) {
+      effectiveOffset = (effectivePage - 1) * effectiveLimit;
+    } else {
+      effectiveOffset = Number.isFinite(offset) && offset >= 0 ? Math.floor(offset) : 0;
+      effectivePage = Math.floor(effectiveOffset / effectiveLimit) + 1;
     }
 
     const [items, total] = await Promise.all([
       Transaction.find(filter)
         .sort({ date: -1, createdAt: -1 })
-        .skip(Number(offset))
-        .limit(Number(limit)),
+        .skip(effectiveOffset)
+        .limit(effectiveLimit),
       Transaction.countDocuments(filter),
     ]);
 
-    const nextOffset = Number(offset) + Number(limit);
+    const nextOffset = effectiveOffset + effectiveLimit;
     const hasMore = nextOffset < total;
-    const hasPrevious = Number(offset) > 0;
-    const prevOffset = hasPrevious ? Math.max(0, Number(offset) - Number(limit)) : null;
+    const hasPrevious = effectiveOffset > 0;
+    const prevOffset = hasPrevious ? Math.max(0, effectiveOffset - effectiveLimit) : null;
 
     return res.status(200).json({
       items,
       meta: {
         total,
-        limit: Number(limit),
-        offset: Number(offset),
-        page: Number(page),
-        size: Number(size),
+        limit: effectiveLimit,
+        offset: effectiveOffset,
+        page: effectivePage,
+        size: effectiveLimit,
         hasMore,
         hasPrevious,
         nextOffset: hasMore ? nextOffset : null,
