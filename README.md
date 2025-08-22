@@ -7,7 +7,7 @@ Node/Express + MongoDB backend for authentication, transactions, and expense pre
 1) Requirements: Node 18+, MongoDB Atlas (or local), npm.
 
 2) Install deps:
-```
+```bash
 npm install
 ```
 
@@ -16,15 +16,22 @@ npm install
 PORT=5000
 MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority
 JWT_SECRET=change_me
-# Optional — only used if you explicitly opt-in on /api/predict
+# Optional AI providers (only used if you opt-in)
 OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
 ```
 
 4) Start dev server:
-```
+```bash
 npm run dev
 ```
 Server will print `Server running on port 5000` when ready.
+
+## Scripts
+
+- `npm run dev` — Start with nodemon
+- `npm start` — Start with Node
+- `npm run seed:transactions` — Seed demo transactions to the connected DB (check `scripts/seed-transactions.js`)
 
 ## Endpoints
 
@@ -48,8 +55,17 @@ Server will print `Server running on port 5000` when ready.
 
 ### Prediction (Protected)
 - POST `/api/predict`
-  - body: `{ days?: number (7..180), useOpenAI?: boolean }`
-  - Default behavior: returns a free heuristic prediction. If `useOpenAI=true` and `OPENAI_API_KEY` is present, calls OpenAI.
+  - body: `{ days?: number (7..180), useOpenAI?: boolean, useGemini?: boolean }`
+  - Default behavior: returns a free heuristic prediction. If `useOpenAI=true` and `OPENAI_API_KEY` is present, calls OpenAI. If `useGemini=true` and `GEMINI_API_KEY` is present, calls Gemini. If multiple are true, Gemini takes precedence in current implementation.
+
+### AI (Protected)
+- POST `/api/ai/coach`
+  - body: `{ days?: number (7..180), freeOnly?: boolean, provider?: 'heuristic'|'gemini'|'openai'|'auto' }`
+  - Returns a coaching suggestion based on recent spend. `freeOnly=true` forces heuristic mode.
+
+- POST `/api/ai/recurring/scan`
+  - body: `{ days?: number (30..365), freeOnly?: boolean, provider?: 'heuristic'|'gemini'|'openai'|'auto' }`
+  - Scans transactions for likely recurring charges and surfaces insights.
 
 ## Request Validation
 Lightweight validation without external libraries lives in `validators/schemas.js` and is applied by `middleware/validate.js` in route files. Invalid input returns HTTP 400 with a helpful message.
