@@ -121,6 +121,43 @@ export const schemas = {
     if (!isFinite(days)) days = 90;
     days = Math.max(7, Math.min(180, Math.floor(days)));
     const useOpenAI = Boolean(body?.useOpenAI);
-    return { value: { days, useOpenAI } };
+    const useGemini = Boolean(body?.useGemini);
+    return { value: { days, useOpenAI, useGemini } };
+  },
+  
+  coach(body) {
+    let days = Number(body?.days ?? 90);
+    if (!isFinite(days)) days = 90;
+    days = Math.max(7, Math.min(180, Math.floor(days)));
+    const freeOnly = Boolean(body?.freeOnly);
+    const providerRaw = body?.provider;
+    let provider;
+    if (providerRaw == null) {
+      provider = undefined;
+    } else {
+      const p = String(providerRaw);
+      const ok = ['heuristic', 'gemini', 'openai', 'auto'];
+      if (!ok.includes(p)) return { error: "provider must be one of 'heuristic'|'gemini'|'openai'|'auto'" };
+      provider = p;
+    }
+    return { value: { days, freeOnly, ...(provider ? { provider } : {}) } };
+  },
+
+  recurringScan(body) {
+    let days = Number(body?.days ?? 180);
+    if (!isFinite(days)) days = 180;
+    days = Math.max(30, Math.min(365, Math.floor(days)));
+    const freeOnly = Boolean(body?.freeOnly);
+    const providerRaw = body?.provider;
+    let provider;
+    if (providerRaw == null) {
+      provider = undefined;
+    } else {
+      const p = String(providerRaw);
+      const ok = ['heuristic', 'gemini', 'openai', 'auto'];
+      if (!ok.includes(p)) return { error: "provider must be one of 'heuristic'|'gemini'|'openai'|'auto'" };
+      provider = p;
+    }
+    return { value: { days, freeOnly, ...(provider ? { provider } : {}) } };
   },
 };

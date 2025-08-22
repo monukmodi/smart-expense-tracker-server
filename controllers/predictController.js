@@ -5,6 +5,28 @@ function daysBetween(a, b) {
   return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 }
 
+async function callGemini(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  console.log('[predict] callGemini: sending request (promptChars=%d)', (prompt || '').length);
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2 },
+    }),
+  });
+  console.log('[predict] callGemini: HTTP status %d', resp.status);
+  if (!resp.ok) throw new Error(`Gemini error: ${resp.status}`);
+  const data = await resp.json();
+  console.log("Gemini response:", data);
+  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('') || '';
+  return text;
+}
+
 function computeHeuristic(transactions) {
   // Aggregate by category and overall across the window
   const byCategory = new Map();
@@ -84,7 +106,8 @@ async function callOpenAI(prompt) {
 export const predictExpenses = async (req, res, next) => {
   try {
     const userId = req.user?.userId;
-    const { days = 90, useOpenAI = false } = req.body || {};
+    const { days = 90, useOpenAI = false, useGemini = false } = req.body || {};
+    console.log('[predict] request body ->', { days, useOpenAI, useGemini });
 
     const since = new Date();
     since.setDate(since.getDate() - Math.max(7, Math.min(180, Number(days) || 90)));
@@ -94,15 +117,12 @@ export const predictExpenses = async (req, res, next) => {
     // Free heuristic by default
     const heuristic = computeHeuristic(transactions);
 
-    if (!useOpenAI) {
+    if (!useOpenAI && !useGemini) {
+      console.log('[predict] using heuristic only (no provider requested)');
       return res.status(200).json({ prediction: heuristic, source: 'heuristic' });
     }
 
-    // If explicitly requested and key is present, enhance with OpenAI
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(200).json({ prediction: heuristic, source: 'heuristic', note: 'OPENAI_API_KEY not set; returned heuristic.' });
-    }
-
+    // Build prompt once, used by either provider
     const summary = {
       daysAnalyzed: heuristic.daysAnalyzed,
       categories: Object.fromEntries(
@@ -116,18 +136,35 @@ export const predictExpenses = async (req, res, next) => {
 
     let aiJson = null;
     try {
-      const content = await callOpenAI(prompt);
-      // Try to parse JSON from the assistant's reply
+      let content = '';
+      if (useGemini) {
+        if (!process.env.GEMINI_API_KEY) {
+          console.warn('[predict] GEMINI_API_KEY not set; falling back to heuristic');
+          return res.status(200).json({ prediction: heuristic, source: 'heuristic', note: 'GEMINI_API_KEY not set; returned heuristic.' });
+        }
+        console.log('[predict] invoking Gemini provider');
+        content = await callGemini(prompt);
+      } else if (useOpenAI) {
+        if (!process.env.OPENAI_API_KEY) {
+          console.warn('[predict] OPENAI_API_KEY not set; falling back to heuristic');
+          return res.status(200).json({ prediction: heuristic, source: 'heuristic', note: 'OPENAI_API_KEY not set; returned heuristic.' });
+        }
+        console.log('[predict] invoking OpenAI provider');
+        content = await callOpenAI(prompt);
+      }
+      // Try to parse JSON from the model reply
       const start = content.indexOf('{');
       const end = content.lastIndexOf('}');
       if (start !== -1 && end !== -1) {
         aiJson = JSON.parse(content.slice(start, end + 1));
       }
     } catch (e) {
-      // Swallow OpenAI errors and fall back to heuristic
+      // Swallow provider errors and fall back to heuristic
+      console.error('[predict] provider error:', e?.message || e);
     }
 
     if (!aiJson || typeof aiJson.total !== 'number') {
+      console.log('[predict] invalid/empty AI JSON; returning heuristic');
       return res.status(200).json({ prediction: heuristic, source: 'heuristic' });
     }
 
@@ -138,9 +175,9 @@ export const predictExpenses = async (req, res, next) => {
         categoryBreakdown: Object.fromEntries(
           Object.entries(aiJson.categories || {}).map(([k, v]) => [k, Number(Number(v).toFixed(2))])
         ),
-        method: 'openai',
+        method: useGemini ? 'gemini' : 'openai',
       },
-      source: 'openai',
+      source: useGemini ? 'gemini' : 'openai',
     });
   } catch (error) {
     return next(error);

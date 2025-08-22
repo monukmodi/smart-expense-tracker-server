@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import predictRoutes from './routes/predictRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 
@@ -25,6 +26,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/predict', predictRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Global error handlers
 app.use(notFound);
