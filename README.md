@@ -19,6 +19,17 @@ JWT_SECRET=change_me
 # Optional AI providers (only used if you opt-in)
 OPENAI_API_KEY=sk-...
 GEMINI_API_KEY=...
+
+# SMTP (optional but recommended for email verification)
+# Using Gmail? Enable 2FA and create an App Password, then set:
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+# If using port 465 set SMTP_SECURE=true, otherwise false or omit
+SMTP_SECURE=false
+SMTP_USER=you@gmail.com
+SMTP_PASS=your_app_password
+# Optional override for From header
+MAIL_FROM="Smart Expense Tracker <you@gmail.com>"
 ```
 
 4) Start dev server:
@@ -40,9 +51,16 @@ Server will print `Server running on port 5000` when ready.
 ### Auth
 - POST `/api/auth/register`
   - body: `{ name, email, password }`
+  - behavior: creates user, generates a 6-digit code (15 min expiry), sends email. Returns a message; does NOT log in yet.
+- POST `/api/auth/verify`
+  - body: `{ email, code }` where `code` is a 6-digit string
+  - behavior: marks the user as verified and returns `{ user, token }` on success.
+- POST `/api/auth/resend-code`
+  - body: `{ email }`
+  - behavior: generates and emails a fresh 6-digit code (resets 15 min expiry).
 - POST `/api/auth/login`
   - body: `{ email, password }`
-- Both return `{ user, token }` on success.
+  - behavior: requires the account to be verified; returns `{ user, token }` on success.
 
 ### Transactions (Protected — Bearer token required)
 - GET `/api/transactions`
@@ -80,6 +98,20 @@ Register:
 curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Test User","email":"testuser@example.com","password":"Passw0rd!"}'
+```
+
+Verify:
+```
+curl -X POST http://localhost:5000/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","code":"123456"}'
+```
+
+Resend code:
+```
+curl -X POST http://localhost:5000/api/auth/resend-code \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com"}'
 ```
 
 Login:

@@ -29,12 +29,32 @@ export const schemas = {
     return { value: { name, email: String(email).toLowerCase().trim(), password } };
   },
 
+  verify(body) {
+    const email = body?.email;
+    const code = String(body?.code || '').trim();
+    if (!isEmail(email)) return { error: 'email must be a valid email' };
+    if (!/^\d{6}$/.test(code)) return { error: 'code must be a 6-digit number' };
+    return { value: { email: String(email).toLowerCase().trim(), code } };
+  },
+
+  resendCode(body) {
+    const email = body?.email;
+    if (!isEmail(email)) return { error: 'email must be a valid email' };
+    return { value: { email: String(email).toLowerCase().trim() } };
+  },
+
   login(body) {
     const email = body?.email;
     const password = String(body?.password || '');
     if (!isEmail(email)) return { error: 'email must be a valid email' };
     if (!password) return { error: 'password is required' };
     return { value: { email: String(email).toLowerCase().trim(), password } };
+  },
+
+  googleSignIn(body) {
+    const idToken = sanitizeString(String(body?.idToken || ''), { min: 1, max: 5000 });
+    if (!idToken) return { error: 'idToken is required' };
+    return { value: { idToken } };
   },
 
   txCreate(body) {

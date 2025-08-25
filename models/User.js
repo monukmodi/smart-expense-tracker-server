@@ -18,6 +18,26 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // Email verification fields
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationCode: {
+      type: String,
+    },
+    verificationExpires: {
+      type: Date,
+    },
+    // OAuth support (for future Google login)
+    provider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    oauthId: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
